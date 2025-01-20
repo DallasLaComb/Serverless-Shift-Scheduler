@@ -10,25 +10,40 @@ jobs:
     runs-on: ubuntu-latest  # Use the latest Ubuntu runner
 
     steps:
+      # Step 1: Checkout the code
       - name: Checkout code
         uses: actions/checkout@v3  # Check out the repository code
 
+      # Step 2: Set up Python environment
       - name: Set up Python
-        uses: actions/setup-python@v4  # Set up the Python environment
+        uses: actions/setup-python@v4  # Set up Python
 
+      # Step 3: Set up AWS SAM CLI
       - name: Set up AWS SAM
-        uses: aws-actions/setup-sam@v2  # Install the AWS SAM CLI
+        uses: aws-actions/setup-sam@v2  # Install AWS SAM CLI
 
+      # Step 4: Configure AWS credentials
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2  # Set up AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}  # Access key stored in GitHub Secrets
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}  # Secret key stored in GitHub Secrets
-          aws-region: us-east-1  # Specify the AWS region
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
 
+      # Step 5: Build the SAM application
       - name: Build SAM application
-        run: sam build --use-container  # Build the SAM application using a container
+        run: sam build --use-container
 
+      # Step 6: Clear cached SAM configuration (if required)
+      - name: Clear cached SAM configuration
+        run: rm -rf .aws-sam
+
+      # Step 7: Deploy the SAM application
       - name: Deploy SAM application
+        env:
+          AWS_DEFAULT_REGION: us-east-1  # Ensure AWS region consistency
         run: |
-          sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --stack-name serverless-shift-scheduler --s3-bucket shift-scheduler-artifacts-dallas --capabilities CAPABILITY_IAM  # Deploy the SAM application
+          sam deploy --no-confirm-changeset --no-fail-on-empty-changeset \
+            --stack-name serverless-shift-scheduler \
+            --s3-bucket shift-scheduler-artifacts-dallas \
+            --capabilities CAPABILITY_IAM
