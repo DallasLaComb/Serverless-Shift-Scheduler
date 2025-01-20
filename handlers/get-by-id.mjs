@@ -13,35 +13,53 @@ const tableName = process.env.SAMPLE_TABLE;
  * A simple example includes a HTTP get method to get one item by id from a DynamoDB table.
  */
 export const getByIdHandler = async (event) => {
+  const corsHeaders = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+
   if (event.httpMethod !== 'GET') {
-    throw new Error(`getMethod only accept GET method, you tried: ${event.httpMethod}`);
+    return {
+      statusCode: 405,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: `Method not allowed. Use GET instead of ${event.httpMethod}` }),
+    };
   }
-  // All log statements are written to CloudWatch
-  console.info('received:', event);
- 
-  // Get id from pathParameters from APIGateway because of `/{id}` at template.yaml
+
+  console.info('Received request:', event);
+
   const id = event.pathParameters.id;
- 
-  // Get the item from the table
-  // https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/DynamoDB/DocumentClient.html#get-property
-  var params = {
-    TableName : tableName,
-    Key: { id: id },
+  const params = {
+    TableName: process.env.SAMPLE_TABLE,
+    Key: { id },
   };
 
   try {
     const data = await ddbDocClient.send(new GetCommand(params));
-    var item = data.Item;
+    const item = data.Item;
+
+    if (!item) {
+      return {
+        statusCode: 404,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: `Item with id ${id} not found` }),
+      };
+    }
+
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: JSON.stringify(item),
+    };
   } catch (err) {
-    console.log("Error", err);
+    console.error('Error fetching item:', err);
+
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: 'Failed to retrieve item', details: err.message }),
+    };
   }
- 
-  const response = {
-    statusCode: 200,
-    body: JSON.stringify(item)
-  };
- 
-  // All log statements are written to CloudWatch
-  console.info(`response from: ${event.path} statusCode: ${response.statusCode} body: ${response.body}`);
-  return response;
-}
+};
